@@ -1,22 +1,35 @@
-pipeline {
-    agent any
 
-    stages {
-        stage('Checkout SCM') {
-            steps {
-                git 'https://github.com/saikumar0503/maven.git'
+pipeline{
+    agent any
+    
+    environment{
+        PATH = "/opt/maven3/bin:$PATH"
+    }
+    stages{
+        stage("Git Checkout"){
+            steps{
+                git credentialsId: 'javahome2', url: 'https://github.com/srinivas1987devops/myweb.git'
             }
         }
-        stage('Maven Build') {
-            steps {
-                sh 'mvn clean package'
+        stage("Maven Build"){
+            steps{
+                sh "mvn clean package"
+                sh "mv target/*.war target/myweb.war"
             }
         }
-        stage('Deploy to Dev') {
-            steps {
+        stage("deploy-dev"){
+            steps{
                 sshagent(['IAS-one']) {
-                    sh 'scp -o StrictHostKeyChecking=no target/project-z-1.0-SNAPSHOT.jar ec2-user@172.16.10.251:/home/ec2-user/apache-tomcat-9.0.46/webapps/'
-                }
+                sh """
+                    scp -o StrictHostKeyChecking=no target/myweb.war  ec2-user@172.16.10.246:/opt/tomcat/webapps
+                    
+                    ssh ec2-user@172.16.10.246 /opt/tomcat/bin/shutdown.sh
+                    
+                    ssh ec2-user@172.16.10.246 /opt/tomcat/bin/startup.sh
+                
+                """
+            }
+            
             }
         }
     }
